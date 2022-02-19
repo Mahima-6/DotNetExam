@@ -1,133 +1,148 @@
-﻿using System;
+﻿using MahimaModhawala.Models;
+using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Web.Http;
-using System.Web.Http.Description;
-using MahimaModhawala2;
+using System.Web;
+using System.Web.Mvc;
 
-namespace MahimaModhawala2.Controllers
+namespace MahimaModhawala.Controllers
 {
-    public class ProductsController : ApiController
+    public class ProductsController : Controller
     {
-        private PracticeEntities db = new PracticeEntities();
-
-        // GET: api/Products
-        public IQueryable<Product> GetProducts()
+        // GET: Products
+        public ActionResult Index()
         {
-            return db.Products;
-        }
-
-        // GET: api/Products/5
-        [ResponseType(typeof(Product))]
-        public IHttpActionResult GetProduct(int id)
-        {
-            Product product = db.Products.Find(id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(product);
-        }
-
-        // PUT: api/Products/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutProduct(int id, Product product)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (id != product.ProductId)
-            {
-                return BadRequest();
-            }
-
-            db.Entry(product).State = EntityState.Modified;
-
+            SqlConnection sql = new SqlConnection();
+            sql.ConnectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Practice;Integrated Security=True;";
+            sql.Open();
+            SqlCommand view = new SqlCommand();
+            view.Connection = sql;
+            view.CommandType = System.Data.CommandType.StoredProcedure;
+            view.CommandText = "index";
+            List<Products> list = new List<Products>();
             try
             {
-                db.SaveChanges();
-            }
-            catch (DbUpdateConcurrencyException)
+                SqlDataReader dr = view.ExecuteReader();
+                while(dr.Read())
+                {
+                    Products ps = new Products();
+                    ps.ProductId = (int)dr["ProductId"];
+                    ps.ProductName = (string)dr["ProductName"];
+                    ps.Rate = (decimal)dr["Rate"];
+                    ps.Description = (string)dr["Description"];
+                    ps.CategoryName = (string)dr["CategoryName"];
+                    list.Add(ps);
+                }
+
+            }catch(Exception e)
             {
-                if (!ProductExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            sql.Close();
+            return View(list);
         }
 
-        // POST: api/Products
-        [ResponseType(typeof(Product))]
-        public IHttpActionResult PostProduct(Product product)
+        // GET: Products/Details/5
+        public ActionResult Details(int id)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            return View();
+        }
 
-            db.Products.Add(product);
+        // GET: Products/Create
+        public ActionResult Create()
+        {
+            return View();
+        }
 
+        // POST: Products/Create
+        [HttpPost]
+        public ActionResult Create(FormCollection collection)
+        {
             try
             {
-                db.SaveChanges();
-            }
-            catch (DbUpdateException)
-            {
-                if (ProductExists(product.ProductId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+                // TODO: Add insert logic here
 
-            return CreatedAtRoute("DefaultApi", new { id = product.ProductId }, product);
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                return View();
+            }
         }
 
-        // DELETE: api/Products/5
-        [ResponseType(typeof(Product))]
-        public IHttpActionResult DeleteProduct(int id)
+        // GET: Products/Edit/5
+        public ActionResult Edit(int? id)
         {
-            Product product = db.Products.Find(id);
-            if (product == null)
+            SqlConnection sql = new SqlConnection();
+            sql.ConnectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Practice;Integrated Security=True;";
+            sql.Open();
+            SqlCommand view = new SqlCommand();
+            view.Connection = sql;
+            view.CommandType = System.Data.CommandType.StoredProcedure;
+            view.CommandText = "updatebyid";
+            //view.CommandText = "Select *  from Products where ProductId=@ProductId";
+            view.Parameters.AddWithValue("@ProductId",id);
+            SqlDataReader dr = view.ExecuteReader();
+            Products pp = null;
+            if(dr.Read())
             {
-                return NotFound();
+                pp = new Products { ProductId = (int)id, ProductName = (string)dr["ProductName"], Rate = (decimal)dr["Rate"], Description = (string)dr["Description"], CategoryName = (string)dr["CategoryName"] }; 
+            
             }
-
-            db.Products.Remove(product);
-            db.SaveChanges();
-
-            return Ok(product);
+            sql.Close();
+            return View(pp);
+            
         }
 
-        protected override void Dispose(bool disposing)
+        // POST: Products/Edit/5
+        [HttpPost]
+        public ActionResult Edit(Products obj)
         {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
+            SqlConnection sql = new SqlConnection();
+            sql.ConnectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Practice;Integrated Security=True;";
+            sql.Open();
+            SqlCommand view = new SqlCommand();
+            view.Connection = sql;
+            view.CommandType = System.Data.CommandType.StoredProcedure;
+            view.CommandText = "edit";
+            //view.CommandText = "update Products set ProductName=@ProductName,Rate=@Rate,Description=@Description,CategoryName=@CategoryName where ProductId=@ProductId";
+            view.Parameters.AddWithValue("@ProductId",obj.ProductId);
+            view.Parameters.AddWithValue("@ProductName",obj.ProductName);
+            view.Parameters.AddWithValue("@Rate", obj.Rate);
+            view.Parameters.AddWithValue("@Description", obj.Description);
+            view.Parameters.AddWithValue("@CategoryName", obj.CategoryName);
+            view.ExecuteNonQuery();
+            sql.Close();
+            return View();
+
         }
 
-        private bool ProductExists(int id)
+        // GET: Products/Delete/5
+        public ActionResult Delete(int id)
         {
-            return db.Products.Count(e => e.ProductId == id) > 0;
+            return View();
+        }
+
+        // POST: Products/Delete/5
+        [HttpPost]
+        public ActionResult Delete(int id, FormCollection collection)
+        {
+            try
+            {
+                // TODO: Add delete logic here
+
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        public ActionResult welcome()
+        {
+            return View();
         }
     }
 }
